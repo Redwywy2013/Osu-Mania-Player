@@ -4,67 +4,89 @@
 <meta charset="UTF-8">
 <title>osu!mania Web Player</title>
 <style>
-  body { margin:0; background:#111; color:white; font-family:sans-serif; text-align:center; }
-  #loader, #menu, #game { display:none; }
-  canvas { background:#000; display:block; margin:0 auto; }
-  button { margin:5px; padding:10px; }
+  body { margin:0; background:#111; color:white; font-family:sans-serif; display:flex; height:100vh; }
+  #sidebar { width:300px; background:#222; overflow-y:auto; padding:10px; }
+  #main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  canvas { background:#000; display:block; margin:auto; }
+  .song { margin:5px 0; cursor:pointer; padding:5px; background:#333; border-radius:5px; }
+  .diff { margin-left:15px; cursor:pointer; color:#bbb; }
+  #settings { padding:10px; border-top:1px solid #444; }
 </style>
 </head>
 <body>
-<h1>osu!mania Web Player</h1>
-
-<div id="loader">
-  <h2>Load .osuhtml file</h2>
-  <input type="file" id="fileInput" accept=".osuhtml">
+<div id="sidebar">
+  <h3>Songs</h3>
+  <div id="songList"></div>
+  <div id="settings">
+    <h4>Settings</h4>
+    <label>Note Speed: <input type="range" id="speedSlider" min="0.1" max="1" step="0.05" value="0.3"></label><br>
+    <label>Volume: <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1"></label><br>
+    <small>Keys: A / S / K / L (customizable later)</small>
+  </div>
 </div>
-
-<div id="menu">
-  <h2 id="songTitle"></h2>
-  <h3>Select Difficulty</h3>
-  <div id="diffList"></div>
-</div>
-
-<div id="game">
+<div id="main">
   <canvas id="gameCanvas" width="800" height="600"></canvas>
 </div>
 
 <script>
-const fileInput = document.getElementById("fileInput");
-const menuDiv = document.getElementById("menu");
-const songTitleEl = document.getElementById("songTitle");
-const diffList = document.getElementById("diffList");
-const gameDiv = document.getElementById("game");
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const songListDiv = document.getElementById("songList");
+const speedSlider = document.getElementById("speedSlider");
+const volumeSlider = document.getElementById("volumeSlider");
 
+let speed = parseFloat(speedSlider.value);
+let volume = parseFloat(volumeSlider.value);
+
+speedSlider.oninput = () => speed = parseFloat(speedSlider.value);
+volumeSlider.oninput = () => { if(audio) audio.volume = parseFloat(volumeSlider.value); };
+
+let songs = [];
 let songData = {};
 let notes = [];
 let audio, bgImage;
 let keyStates = {};
-let startOffset = 0; // when audio starts
+let lineY = 550;
 
-fileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  parseOsuhtml(text);
+// === Fetch songs from GitHub repo ===
+const API_URL = "https://api.github.com/repos/Redwywy2013/Osu-Mania-Player/contents/Songs";
+
+fetch(API_URL).then(r=>r.json()).then(data=>{
+  songs = data.filter(f => f.name.endsWith(".osuhtml"));
+  renderSongList();
 });
 
-function parseOsuhtml(text) {
-  songData = { difficulties: {} };
+function renderSongList() {
+  songListDiv.innerHTML = "";
+  songs.forEach(file=>{
+    let div = document.createElement("div");
+    div.className = "song";
+    div.textContent = file.name.replace(".osuhtml","");
+    div.onclick = () => loadSong(file.download_url);
+    songListDiv.appendChild(div);
+  });
+}
 
-  // Parse artist-title
+async function loadSong(url) {
+  const text = await fetch(url).then(r=>r.text());
+  parseOsuhtml(text);
+}
+
+function parseOsuhtml(text) {
+  songData = { difficulties:{} };
+
+  // Artist - Title
   const atMatch = text.match(/^Artist - Title:\s*(.+)$/m);
   if (atMatch) songData.title = atMatch[1];
 
-  // Parse difficulties
+  // Difficulties
   const diffRegex = /\[(.+?)\]:\n([\s\S]*?)(?=^\[|\nBackground:|\nAudio Data:|$)/gm;
   let diffMatch;
   while ((diffMatch = diffRegex.exec(text)) !== null) {
     songData.difficulties[diffMatch[1]] = diffMatch[2].trim();
   }
 
-  // Parse background
+  // Background
   const bgMatch = text.match(/Background:\s*(data:image\/.+)$/m);
   if (bgMatch) {
     songData.background = bgMatch[1];
@@ -72,24 +94,15 @@ function parseOsuhtml(text) {
     bgImage.src = songData.background;
   }
 
-  // Parse audio
+  // Audio
   const audioMatch = text.match(/Audio Data:\s*(data:audio\/.+)$/m);
   if (audioMatch) songData.audio = audioMatch[1];
 
-  showMenu();
-}
-
-function showMenu() {
-  document.getElementById("loader").style.display = "none";
-  menuDiv.style.display = "block";
-  songTitleEl.textContent = songData.title || "Unknown Song";
-
-  diffList.innerHTML = "";
-  for (let diffName in songData.difficulties) {
-    let btn = document.createElement("button");
-    btn.textContent = diffName;
-    btn.onclick = () => startGame(diffName);
-    diffList.appendChild(btn);
+  // Render difficulties
+  let diffs = Object.keys(songData.difficulties);
+  if (diffs.length) {
+    alert(`Loaded ${songData.title}. Choose difficulty: ${diffs.join(", ")}`);
+    startGame(diffs[0]); // auto-pick first for now
   }
 }
 
@@ -117,48 +130,41 @@ function parseOsuContent(osuText) {
 }
 
 function startGame(diffName) {
-  menuDiv.style.display = "none";
-  gameDiv.style.display = "block";
-
   notes = parseOsuContent(songData.difficulties[diffName]);
   audio = new Audio(songData.audio);
+  audio.volume = volume;
   audio.play();
-  startOffset = performance.now() - audio.currentTime * 1000;
-
   requestAnimationFrame(gameLoop);
 }
 
 function gameLoop() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Draw background
+  // Background
   if (bgImage) {
     ctx.globalAlpha = 0.3;
-    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bgImage,0,0,canvas.width,canvas.height);
     ctx.globalAlpha = 1.0;
   }
 
-  let currentTime = audio.currentTime * 1000; // ms
-  let lineY = 550;
-  let colWidth = canvas.width / 4;
-
-  // Draw judgment line
+  // Judgment line
   ctx.fillStyle = "white";
   ctx.fillRect(0,lineY,canvas.width,5);
 
-  // Draw columns
+  // Columns
+  let colWidth = canvas.width/4;
   for (let i=0;i<4;i++) {
     ctx.strokeStyle="#444";
     ctx.strokeRect(i*colWidth,0,colWidth,canvas.height);
   }
 
-  // Draw notes
+  // Notes
   ctx.fillStyle="cyan";
-  let speed = 0.3; // px per ms
+  let currentTime = audio.currentTime * 1000;
   notes.forEach(n=>{
     let timeToHit = n.time - currentTime;
-    let y = lineY - timeToHit * speed;
-    if (!n.hit) {
+    let y = lineY - timeToHit * (speed*5); // speed multiplier
+    if (!n.hit && y < canvas.height) {
       ctx.fillRect(n.column*colWidth+5,y,colWidth-10,20);
     }
   });
@@ -166,9 +172,9 @@ function gameLoop() {
   if (!audio.paused) requestAnimationFrame(gameLoop);
 }
 
-// Key controls
-window.addEventListener("keydown", e => keyStates[e.code] = true);
-window.addEventListener("keyup", e => keyStates[e.code] = false);
+// Key states
+window.addEventListener("keydown", e => keyStates[e.code]=true);
+window.addEventListener("keyup", e => keyStates[e.code]=false);
 </script>
 </body>
 </html>
