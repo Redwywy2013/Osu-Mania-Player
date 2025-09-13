@@ -5,7 +5,7 @@
 <title>osu!mania Web Player</title>
 <style>
   body { margin:0; background:#111; color:white; font-family:sans-serif; text-align:center; }
-  #menu, #game { display:none; }
+  #loader, #menu, #game { display:none; }
   canvas { background:#000; display:block; margin:0 auto; }
   button { margin:5px; padding:10px; }
 </style>
@@ -25,7 +25,7 @@
 </div>
 
 <div id="game">
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
 </div>
 
 <script>
@@ -39,7 +39,9 @@ const ctx = canvas.getContext("2d");
 
 let songData = {};
 let notes = [];
-let audio, startTime;
+let audio, bgImage;
+let keyStates = {};
+let startOffset = 0; // when audio starts
 
 fileInput.addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -64,7 +66,11 @@ function parseOsuhtml(text) {
 
   // Parse background
   const bgMatch = text.match(/Background:\s*(data:image\/.+)$/m);
-  if (bgMatch) songData.background = bgMatch[1];
+  if (bgMatch) {
+    songData.background = bgMatch[1];
+    bgImage = new Image();
+    bgImage.src = songData.background;
+  }
 
   // Parse audio
   const audioMatch = text.match(/Audio Data:\s*(data:audio\/.+)$/m);
@@ -117,35 +123,52 @@ function startGame(diffName) {
   notes = parseOsuContent(songData.difficulties[diffName]);
   audio = new Audio(songData.audio);
   audio.play();
-  startTime = performance.now();
+  startOffset = performance.now() - audio.currentTime * 1000;
+
   requestAnimationFrame(gameLoop);
 }
 
 function gameLoop() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  let currentTime = performance.now() - startTime;
+  // Draw background
+  if (bgImage) {
+    ctx.globalAlpha = 0.3;
+    ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1.0;
+  }
 
+  let currentTime = audio.currentTime * 1000; // ms
   let lineY = 550;
+  let colWidth = canvas.width / 4;
+
+  // Draw judgment line
   ctx.fillStyle = "white";
   ctx.fillRect(0,lineY,canvas.width,5);
 
-  let colWidth = canvas.width/4;
+  // Draw columns
   for (let i=0;i<4;i++) {
     ctx.strokeStyle="#444";
     ctx.strokeRect(i*colWidth,0,colWidth,canvas.height);
   }
 
+  // Draw notes
   ctx.fillStyle="cyan";
+  let speed = 0.3; // px per ms
   notes.forEach(n=>{
     let timeToHit = n.time - currentTime;
-    let speed = 0.3; // px per ms
-    let y = lineY - timeToHit*speed;
-    ctx.fillRect(n.column*colWidth+5,y,colWidth-10,20);
+    let y = lineY - timeToHit * speed;
+    if (!n.hit) {
+      ctx.fillRect(n.column*colWidth+5,y,colWidth-10,20);
+    }
   });
 
   if (!audio.paused) requestAnimationFrame(gameLoop);
 }
+
+// Key controls
+window.addEventListener("keydown", e => keyStates[e.code] = true);
+window.addEventListener("keyup", e => keyStates[e.code] = false);
 </script>
 </body>
 </html>
