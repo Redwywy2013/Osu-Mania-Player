@@ -2,634 +2,240 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>osu!mania Web Player</title>
+<title>osu!mania Web Player (Minimal Format)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  :root {
-    --bg: #0f1115;
-    --panel: #1a1f29;
-    --panel2: #10141b;
-    --text: #e6ebf2;
-    --muted: #aab3c2;
-    --accent: #6ea8fe;
-    --accent2: #9d6efe;
-  }
-  html, body { height:100%; }
-  body {
-    margin:0; background:var(--bg); color:var(--text);
-    font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    display:flex; min-height:100%;
-  }
-  #main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  #topbar {
-    height:54px; display:flex; align-items:center; justify-content:space-between;
-    padding:0 16px; background:linear-gradient(180deg, #161b24, #141923);
-    border-bottom:1px solid #0b0e13;
-  }
-  #brand { font-weight:700; letter-spacing:0.3px }
-  #status { color:var(--muted); font-size:13px }
-  #stage { flex:1; display:flex; position:relative; overflow:hidden; }
-  #gamewrap { flex:1; display:flex; align-items:center; justify-content:center; background:var(--panel2); position:relative; }
-  #canvas { background:#000; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-  #overlay {
-    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-    backdrop-filter: blur(4px); background:rgba(0,0,0,.35);
-  }
-  #overlay .card {
-    background:var(--panel); padding:16px 18px; border-radius:12px; width:min(520px, 92vw);
-    box-shadow: 0 12px 28px rgba(0,0,0,.5); text-align:left;
-  }
-  #overlay h3 { margin:0 0 10px 0 }
-  #overlay .row { display:flex; gap:10px; flex-wrap:wrap; }
-  #overlay label { font-size:13px; color:var(--muted) }
-  #overlay input[type=range], #overlay input[type=number] { width:180px; }
-
-  /* Right sidebar (songs list) */
-  #sidebar {
-    width:min(360px, 36vw); background:var(--panel); border-left:1px solid #0b0e13;
-    display:flex; flex-direction:column; max-height:100vh;
-  }
-  #sidebar header { padding:12px 14px; border-bottom:1px solid #0b0e13; }
-  #songlist { overflow:auto; padding:8px 10px; flex:1; }
-  .song {
-    background:#151a23; border:1px solid #0b0e13; border-radius:10px; margin:8px 0; overflow:hidden;
-  }
-  .song > .head {
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:10px 12px; cursor:pointer;
-  }
-  .title { font-weight:600; }
-  .muted { color:var(--muted); font-size:12px; }
-  .caret { color:var(--muted); transition: transform .2s ease; }
-  .open .caret { transform: rotate(90deg); }
-  .diffs { display:none; background:#0f141c; border-top:1px solid #0b0e13; }
-  .open .diffs { display:block; }
-  .diffs button {
-    display:block; width:100%; text-align:left;
-    background:transparent; color:var(--text); border:0; padding:10px 12px; cursor:pointer;
-  }
-  .diffs button:hover { background:#121a27 }
-  #settings { padding:10px 12px; border-top:1px solid #0b0e13; }
-  #settings h4 { margin:8px 0 }
-  .control { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:6px 0 }
-  .control input[type=range] { flex:1 }
-
-  .btn {
-    appearance:none; border:1px solid #263247; background:#141a25; color:var(--text);
-    padding:8px 12px; border-radius:8px; cursor:pointer;
-  }
-  .btn:hover { border-color:#34507A; background:#172033 }
-  .btn.primary { background:linear-gradient(180deg,#2a5fff,#3754ff); border-color:#2a5fff }
-  .btn.primary:hover { filter:brightness(1.05) }
-
-  .hidden { display:none !important; }
+  body { margin:0; background:#0f1115; color:#e6ebf2; font-family:sans-serif; display:flex; height:100vh; }
+  #main { flex:1; display:flex; flex-direction:column; }
+  #topbar { height:50px; background:#161b24; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+  #stage { flex:1; display:flex; overflow:hidden; }
+  #sidebar { width:300px; background:#1a1f29; overflow-y:auto; border-left:1px solid #0b0e13; }
+  #songlist { padding:8px; }
+  .song { margin:6px 0; border:1px solid #222; border-radius:8px; overflow:hidden; }
+  .song .head { padding:8px 12px; background:#151a23; cursor:pointer; display:flex; justify-content:space-between; }
+  .song .diffs { display:none; background:#10141b; }
+  .song.open .diffs { display:block; }
+  .song .diffs button { display:block; width:100%; padding:8px 12px; background:none; border:0; color:#e6ebf2; text-align:left; cursor:pointer; }
+  .song .diffs button:hover { background:#18202c; }
+  #gamewrap { flex:1; display:flex; align-items:center; justify-content:center; background:#000; position:relative; }
+  #canvas { background:#000; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,.5); }
+  #overlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); }
+  #overlay .card { background:#1a1f29; padding:20px; border-radius:12px; text-align:center; color:#fff; }
+  .btn { background:#2a5fff; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; margin:4px; }
+  .btn:hover { filter:brightness(1.1); }
 </style>
 </head>
 <body>
-  <div id="main">
-    <div id="topbar">
-      <div id="brand">osu!mania Web Player</div>
-      <div id="status">Ready</div>
-      <div>
-        <button id="btnLoadLocal" class="btn">Load .osuhtml</button>
-        <input id="fileLocal" type="file" accept=".osuhtml" class="hidden" />
-        <button id="btnBackToMenu" class="btn hidden">Back</button>
-      </div>
-    </div>
-
-    <div id="stage">
-      <div id="gamewrap">
-        <canvas id="canvas" width="900" height="600"></canvas>
-
-        <div id="overlay">
-          <div class="card">
-            <h3>Paused</h3>
-            <div class="row" style="margin-bottom:8px">
-              <button class="btn" id="resumeBtn">Resume (Esc)</button>
-              <button class="btn" id="restartBtn">Restart</button>
-              <button class="btn" id="quitBtn">Quit to Menu</button>
-            </div>
-            <h4>Settings</h4>
-            <div class="row">
-              <div>
-                <label>Scroll Speed</label><br/>
-                <input type="range" id="speed" min="0.2" max="1.2" step="0.02" value="0.60">
-              </div>
-              <div>
-                <label>Audio Volume</label><br/>
-                <input type="range" id="volume" min="0" max="1" step="0.02" value="1">
-              </div>
-              <div>
-                <label>Global Offset (ms)</label><br/>
-                <input type="number" id="offset" value="0" step="1" style="width:120px">
-              </div>
-            </div>
-            <p class="muted">Keys by default: 4K → A S K L (auto-adjusts with key count). Keybinding UI can be added later.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT SIDEBAR -->
-      <aside id="sidebar">
-        <header>
-          <div style="display:flex; align-items:center; justify-content:space-between">
-            <div><strong>Songs</strong> <span class="muted">from repo</span></div>
-            <button id="refreshBtn" class="btn">Refresh</button>
-          </div>
-        </header>
-        <div id="songlist"></div>
-        <div id="settings">
-          <h4>Quick Settings</h4>
-          <div class="control"><span>Scroll Speed</span><input id="speedQuick" type="range" min="0.2" max="1.2" step="0.02" value="0.60"></div>
-          <div class="control"><span>Volume</span><input id="volumeQuick" type="range" min="0" max="1" step="0.02" value="1"></div>
-          <div class="control"><span>Offset (ms)</span><input id="offsetQuick" type="number" value="0" step="1" style="width:90px"></div>
-        </div>
-      </aside>
+<div id="main">
+  <div id="topbar">
+    <div>osu!mania Web Player</div>
+    <div>
+      <button id="btnBack" class="btn" style="display:none">Back</button>
     </div>
   </div>
-
+  <div id="stage">
+    <div id="gamewrap">
+      <canvas id="canvas" width="800" height="600"></canvas>
+      <div id="overlay"><div class="card">
+        <h3>Paused</h3>
+        <button class="btn" id="resumeBtn">Resume</button>
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="quitBtn">Quit</button>
+      </div></div>
+    </div>
+    <div id="sidebar"><div id="songlist">Loading songs…</div></div>
+  </div>
+</div>
 <script>
-/* -----------------------------
-   Global state & DOM hooks
------------------------------ */
 const API_URL = "https://api.github.com/repos/Redwywy2013/Osu-Mania-Player/contents/Songs";
-
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const statusEl = document.getElementById("status");
-
-const sidebar = document.getElementById("sidebar");
 const songListDiv = document.getElementById("songlist");
-const refreshBtn = document.getElementById("refreshBtn");
-
 const overlay = document.getElementById("overlay");
+const btnBack = document.getElementById("btnBack");
 const resumeBtn = document.getElementById("resumeBtn");
 const restartBtn = document.getElementById("restartBtn");
 const quitBtn = document.getElementById("quitBtn");
 
-const btnLoadLocal = document.getElementById("btnLoadLocal");
-const fileLocal = document.getElementById("fileLocal");
-const btnBackToMenu = document.getElementById("btnBackToMenu");
-
-// Settings (both overlay + quick mirrored)
-const speedEl = document.getElementById("speed");
-const volumeEl = document.getElementById("volume");
-const offsetEl = document.getElementById("offset");
-const speedQuick = document.getElementById("speedQuick");
-const volumeQuick = document.getElementById("volumeQuick");
-const offsetQuick = document.getElementById("offsetQuick");
-
-// Settings values
-let scrollSpeed = parseFloat(speedEl.value);    // px/ms multiplier
-let volume = parseFloat(volumeEl.value);
-let globalOffset = parseInt(offsetEl.value, 10) || 0;
-
-function syncSettings(fromQuick=false) {
-  if (fromQuick) {
-    scrollSpeed = parseFloat(speedQuick.value);
-    volume = parseFloat(volumeQuick.value);
-    globalOffset = parseInt(offsetQuick.value, 10)||0;
-    speedEl.value = scrollSpeed;
-    volumeEl.value = volume;
-    offsetEl.value = globalOffset;
-  } else {
-    scrollSpeed = parseFloat(speedEl.value);
-    volume = parseFloat(volumeEl.value);
-    globalOffset = parseInt(offsetEl.value, 10)||0;
-    speedQuick.value = scrollSpeed;
-    volumeQuick.value = volume;
-    offsetQuick.value = globalOffset;
-  }
-}
-speedEl.oninput = ()=>syncSettings(false);
-volumeEl.oninput = ()=>{ syncSettings(false); if (audio) audio.volume = volume; };
-offsetEl.oninput = ()=>syncSettings(false);
-speedQuick.oninput = ()=>syncSettings(true);
-volumeQuick.oninput = ()=>{ syncSettings(true); if (audio) audio.volume = volume; };
-offsetQuick.oninput = ()=>syncSettings(true);
+let repoFiles = [], currentPack=null, audio=null, bgImage=null;
+let game=null;
+let scrollSpeed=0.5, volume=1, globalOffset=0;
 
 /* -----------------------------
-   Repo Songs listing (GitHub API)
+   Fetch and render song list
 ----------------------------- */
-let repoFiles = [];    // .osuhtml list (from API)
-let currentPack = null;// parsed .osuhtml pack
-let audio = null;
-let bgImage = null;
-
-async function listSongs() {
-  status("Fetching songs…");
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    // Only files with .osuhtml (ignore folders)
-    repoFiles = data.filter(it => it.type === "file" && it.name.toLowerCase().endsWith(".osuhtml"));
-    renderSongList();
-    status(`Loaded ${repoFiles.length} song${repoFiles.length===1?"":"s"}.`);
-  } catch (e) {
-    console.error(e);
-    status("Failed to fetch songs from repo.");
-  }
+async function listSongs(){
+  const res=await fetch(API_URL); const data=await res.json();
+  repoFiles=data.filter(f=>f.name.endsWith(".osuhtml"));
+  renderSongList();
 }
-
-function renderSongList() {
-  songListDiv.innerHTML = "";
-  repoFiles.forEach(file => {
-    const songEl = document.createElement("div");
-    songEl.className = "song";
-
-    const head = document.createElement("div");
-    head.className = "head";
-    const left = document.createElement("div");
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = file.name.replace(/\.osuhtml$/i, "");
-    const meta = document.createElement("div");
-    meta.className = "muted";
-    meta.textContent = file.path;
-    left.appendChild(title); left.appendChild(meta);
-
-    const caret = document.createElement("div");
-    caret.className = "caret";
-    caret.textContent = "▶";
-
-    head.appendChild(left); head.appendChild(caret);
-    songEl.appendChild(head);
-
-    const diffs = document.createElement("div");
-    diffs.className = "diffs";
-    songEl.appendChild(diffs);
-
-    head.addEventListener("click", async () => {
-      // toggle open; fetch & parse pack to list diffs
-      const opening = !songEl.classList.contains("open");
-      document.querySelectorAll(".song.open").forEach(el=>el.classList.remove("open")); // close others
-      document.querySelectorAll(".diffs").forEach(el=>el.style.display="none");
-
-      if (opening) {
-        songEl.classList.add("open");
-        diffs.style.display = "block";
-        await loadPackFromURL(file.download_url);
-        diffs.innerHTML = "";
-        const diffNames = Object.keys(currentPack.difficulties);
-        if (!diffNames.length) {
-          const b = document.createElement("div");
-          b.className = "muted"; b.style.padding = "10px 12px";
-          b.textContent = "No difficulties found in this pack.";
+function renderSongList(){
+  songListDiv.innerHTML="";
+  repoFiles.forEach(file=>{
+    const el=document.createElement("div"); el.className="song";
+    const head=document.createElement("div"); head.className="head"; head.textContent=file.name.replace(".osuhtml","");
+    const diffs=document.createElement("div"); diffs.className="diffs";
+    el.appendChild(head); el.appendChild(diffs);
+    head.onclick=async()=>{
+      el.classList.toggle("open");
+      if(el.classList.contains("open")){
+        const text=await fetch(file.download_url).then(r=>r.text());
+        currentPack=parseOsuhtml(text);
+        diffs.innerHTML="";
+        for(const diff in currentPack.difficulties){
+          const b=document.createElement("button"); b.textContent=diff;
+          b.onclick=()=>startGame(diff);
           diffs.appendChild(b);
-        } else {
-          diffNames.forEach(name => {
-            const btn = document.createElement("button");
-            btn.textContent = name;
-            btn.addEventListener("click", () => startChart(name));
-            diffs.appendChild(btn);
-          });
         }
-      } else {
-        songEl.classList.remove("open");
-        diffs.style.display = "none";
       }
-    });
-
-    songListDiv.appendChild(songEl);
+    };
+    songListDiv.appendChild(el);
   });
 }
 
-refreshBtn.addEventListener("click", listSongs);
-
 /* -----------------------------
-   Load pack (.osuhtml) & parse
+   Minimal format parser
 ----------------------------- */
-async function loadPackFromURL(url) {
-  try {
-    status("Loading pack…");
-    const text = await fetch(url).then(r=>r.text());
-    currentPack = parseOsuhtml(text);
-    status(`Loaded: ${currentPack.title || "Untitled"}`);
-    return currentPack;
-  } catch (e) {
-    console.error(e);
-    status("Failed to load pack.");
-    return null;
-  }
-}
-
-btnLoadLocal.addEventListener("click", ()=>fileLocal.click());
-fileLocal.addEventListener("change", async (e)=>{
-  const f = e.target.files?.[0];
-  if (!f) return;
-  const text = await f.text();
-  currentPack = parseOsuhtml(text);
-  // Render a temporary one-item list for local load
-  repoFiles = [{name:(currentPack.title||"Local Pack")+".osuhtml", path:"(local)", download_url:""}];
-  renderSongList();
-});
-
-/* Custom pack format parser
-   Expected sections:
-   Artist - Title: <Artist> - <Title>
-   Difficulties:
-   [Diff Name]:
-   <raw .osu text...>
-   [Another]:
-   <raw .osu text...>
-   Background: data:image/...
-   Audio Data: data:audio/...
-*/
 function parseOsuhtml(text) {
   const pack = { title:"", difficulties:{}, background:"", audio:"" };
-
   const at = text.match(/^Artist - Title:\s*(.+)$/m);
   if (at) pack.title = at[1].trim();
 
-  // Extract the Difficulties block safely
-  const diffStart = text.indexOf("Difficulties:");
-  let diffBlock = "";
-  if (diffStart !== -1) {
-    const after = text.slice(diffStart + "Difficulties:".length);
-    const m = after.search(/^\s*Background:|^\s*Audio Data:/m);
-    diffBlock = m === -1 ? after : after.slice(0, m);
+  const lines = text.split(/\r?\n/);
+  let currentDiff = null;
+  let currentMeta = {};
+  let hitObjects = [];
+
+  for (let line of lines) {
+    if (line.startsWith("[") && line.endsWith("]:")) {
+      if (currentDiff) {
+        pack.difficulties[currentDiff] = {
+          mapper: currentMeta.mapper || "Unknown",
+          keys: parseInt(currentMeta.keys || "4"),
+          hitObjects: hitObjects
+        };
+      }
+      currentDiff = line.slice(1, -2).trim();
+      currentMeta = {};
+      hitObjects = [];
+    }
+    else if (line.startsWith("Mapper:")) {
+      currentMeta.mapper = line.replace("Mapper:","").trim();
+    }
+    else if (line.startsWith("Keys:")) {
+      currentMeta.keys = line.replace("Keys:","").trim();
+    }
+    else if (line.startsWith("HitObjects:")) {
+      // nothing, actual notes come after
+    }
+    else if (line.match(/^\d+,\d+,\d+/)) {
+      const parts = line.split(",");
+      const x = parseInt(parts[0]);
+      const start = parseInt(parts[1]);
+      const type = parseInt(parts[2]);
+      const end = parts[3] ? parseInt(parts[3]) : null;
+      hitObjects.push({ x, t:start, type, end, judged:false });
+    }
+    else if (line.startsWith("Background:")) {
+      pack.background = line.replace("Background:","").trim();
+    }
+    else if (line.startsWith("Audio Data:")) {
+      pack.audio = line.replace("Audio Data:","").trim();
+    }
   }
-
-  // Within difficulties block, headers are lines like: [Name]:
-  const re = /^\[(.+?)\]:\s*\n([\s\S]*?)(?=^\[.+?\]:\s*$|$)/gm;
-  let match;
-  while ((match = re.exec(diffBlock)) !== null) {
-    const name = match[1].trim();
-    const body = match[2].trim();
-    pack.difficulties[name] = body;
+  if (currentDiff) {
+    pack.difficulties[currentDiff] = {
+      mapper: currentMeta.mapper || "Unknown",
+      keys: parseInt(currentMeta.keys || "4"),
+      hitObjects: hitObjects
+    };
   }
-
-  const bg = text.match(/^\s*Background:\s*(data:image\/[^\s]+)\s*$/m);
-  if (bg) pack.background = bg[1];
-
-  const aud = text.match(/^\s*Audio Data:\s*(data:audio\/[^\s]+)\s*$/m);
-  if (aud) pack.audio = aud[1];
-
   return pack;
 }
 
 /* -----------------------------
    Gameplay
 ----------------------------- */
-let game = null;
-let keysDown = {};
-const keyLayouts = {
-  4: ["KeyA","KeyS","KeyK","KeyL"],
-  5: ["KeyA","KeyS","KeyD","KeyK","KeyL"],
-  6: ["KeyA","KeyS","KeyD","KeyJ","KeyK","KeyL"],
-  7: ["KeyS","KeyD","KeyF","Space","KeyJ","KeyK","KeyL"]
-};
-
-function startChart(diffName) {
-  if (!currentPack) return;
-
-  // Parse selected .osu content
-  const osuText = currentPack.difficulties[diffName];
-  const parsed = parseOsuMania(osuText);
+function startGame(diff){
+  const data = currentPack.difficulties[diff];
   game = {
-    diffName,
-    numKeys: parsed.numKeys || 4,
-    hitObjects: parsed.hitObjects,
-    started: false,
-    startMs: 0,
-    lineY: canvas.height - 60,
-    columnWidth: canvas.width / (parsed.numKeys || 4),
-    stats: {score:0, combo:0, perfect:0, good:0, miss:0}
+    diffName: diff,
+    numKeys: data.keys,
+    hitObjects: data.hitObjects,
+    lineY: canvas.height-60,
+    columnWidth: canvas.width/data.keys,
+    stats:{score:0,combo:0}
   };
 
-  // Prepare audio + background
-  if (audio) { try { audio.pause(); } catch{} }
-  audio = new Audio(currentPack.audio);
-  audio.volume = volume;
+  if(audio){ audio.pause(); }
+  audio = new Audio(currentPack.audio); audio.volume=volume;
+  if(currentPack.background){ bgImage=new Image(); bgImage.src=currentPack.background; }
 
-  bgImage = null;
-  if (currentPack.background) {
-    const img = new Image();
-    img.src = currentPack.background;
-    bgImage = img;
-  }
+  document.getElementById("sidebar").style.display="none";
+  btnBack.style.display="inline-block";
+  overlay.style.display="none";
 
-  // UI changes
-  sidebar.classList.add("hidden");
-  btnBackToMenu.classList.remove("hidden");
-  overlay.style.display = "none";
-
-  // Start
-  audio.currentTime = 0;
-  audio.play().then(()=>{
-    game.started = true;
-    requestAnimationFrame(loop);
-  }).catch(err=>{
-    // Autoplay policy: require user gesture
-    status("Click canvas to start audio");
-    canvas.addEventListener("click", kickStartOnce, {once:true});
-    function kickStartOnce(){
-      audio.play();
-      game.started = true;
-      requestAnimationFrame(loop);
-    }
-  });
-}
-
-function backToMenu() {
-  if (audio) { try { audio.pause(); } catch{} }
-  game = null;
-  sidebar.classList.remove("hidden");
-  btnBackToMenu.classList.add("hidden");
-  status("Ready");
-  clearCanvas();
-}
-
-btnBackToMenu.addEventListener("click", backToMenu);
-resumeBtn.addEventListener("click", ()=> overlay.style.display = "none");
-restartBtn.addEventListener("click", ()=>{
-  if (!game || !audio) return;
-  audio.currentTime = 0;
-  overlay.style.display = "none";
-});
-quitBtn.addEventListener("click", backToMenu);
-
-window.addEventListener("keydown", (e)=>{
-  if (e.code === "Escape") {
-    if (!game) return;
-    overlay.style.display = overlay.style.display === "none" ? "flex" : "none";
-    if (overlay.style.display === "flex") { try{ audio.pause(); }catch{} }
-    else { try{ audio.play(); }catch{} }
-    return;
-  }
-  keysDown[e.code] = true;
-  judge(e.code);
-});
-window.addEventListener("keyup", (e)=>{ keysDown[e.code] = false; });
-
-function parseOsuMania(osuText) {
-  // Extract numKeys from [Difficulty]/CircleSize
-  let numKeys = 4;
-  const diffSecMatch = osuText.match(/^\[Difficulty\][\s\S]*?(?=^\[|$)/m);
-  if (diffSecMatch) {
-    const cs = diffSecMatch[0].match(/^\s*CircleSize\s*:\s*(\d+)/m);
-    if (cs) numKeys = parseInt(cs[1], 10);
-  }
-  if (!Number.isFinite(numKeys) || numKeys < 1 || numKeys > 9) numKeys = 4;
-
-  // Parse [HitObjects]
-  const hoMatch = osuText.match(/^\[HitObjects\]\s*([\s\S]*)$/m);
-  const lines = hoMatch ? hoMatch[1].trim().split(/\r?\n/) : [];
-  const hitObjects = [];
-  for (const line of lines) {
-    if (!line || line.startsWith("//")) continue;
-    const parts = line.split(",");
-    if (parts.length < 4) continue;
-    const x = parseInt(parts[0],10);
-    const start = parseInt(parts[2],10);
-    const type = parseInt(parts[3],10) || 0;
-    let end = null;
-    // Hold notes: type bit 128 set, end time in 6th field before : or ,
-    if (type & 128) {
-      // parts[5] is like "endTime:..."; split by ":" or for safety by non-digit
-      const m = parts[5]?.match(/\d+/);
-      if (m) end = parseInt(m[0],10);
-    }
-    const col = Math.max(0, Math.min(numKeys-1, Math.floor(x * numKeys / 512)));
-    hitObjects.push({ t:start, col, end, hit:false, judged:false });
-  }
-  return { numKeys, hitObjects };
-}
-
-function judge(code) {
-  if (!game || !audio) return;
-  const keys = keyLayouts[game.numKeys] || keyLayouts[4];
-  const col = keys.indexOf(code);
-  if (col === -1) return;
-
-  // find nearest unjudged note in this column
-  const now = audio.currentTime * 1000 + globalOffset;
-  let best = null, bestDelta = Infinity, bestIndex = -1;
-  for (let i=0;i<game.hitObjects.length;i++) {
-    const n = game.hitObjects[i];
-    if (n.col !== col || n.judged) continue;
-    const delta = Math.abs(n.t - now);
-    if (delta < bestDelta) { best = n; bestDelta = delta; bestIndex = i; }
-    // small optimization: if future note is already >200ms away and we've passed earlier ones, break
-  }
-  if (!best) return;
-
-  // Simple windows: 32ms perfect, 80ms good, else miss
-  if (bestDelta <= 32) scoreHit(bestIndex, "perfect");
-  else if (bestDelta <= 80) scoreHit(bestIndex, "good");
-  else if (bestDelta <= 140) scoreHit(bestIndex, "ok");
-  else { /* ignore press */ }
-}
-
-function scoreHit(idx, grade) {
-  const n = game.hitObjects[idx];
-  if (n.judged) return;
-  n.judged = true;
-  if (grade === "perfect") { game.stats.score += 300; game.stats.perfect++; game.stats.combo++; }
-  else if (grade === "good") { game.stats.score += 100; game.stats.good++; game.stats.combo++; }
-  else { game.stats.score += 50; game.stats.combo++; }
-}
-
-function loop() {
-  if (!game || !audio) return;
-
-  clearCanvas();
-
-  // BG cover render
-  if (bgImage && bgImage.complete) drawCoverImage(bgImage, ctx, canvas.width, canvas.height, 0.28);
-
-  // columns + judge line
-  const cw = game.columnWidth = canvas.width / game.numKeys;
-  const lineY = game.lineY;
-
-  // judge line
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, lineY, canvas.width, 4);
-
-  // columns
-  for (let i=0;i<game.numKeys;i++) {
-    ctx.strokeStyle = "rgba(255,255,255,.08)";
-    ctx.strokeRect(i*cw, 0, cw, canvas.height);
-  }
-
-  // draw notes
-  const now = audio.currentTime * 1000 + globalOffset;
-  const pxPerMs = scrollSpeed * 5.0; // tuned multiplier for visibility
-
-  for (const n of game.hitObjects) {
-    const dt = n.t - now;
-    const y = lineY - dt * pxPerMs;
-
-    // Cull outside of view (with margin)
-    if (y < -200 || y > canvas.height + 400) continue;
-
-    // hold vs tap
-    const x = n.col * cw + 6;
-    const w = cw - 12;
-
-    if (n.end && n.end > n.t) {
-      // hold: height scaled by duration
-      const dur = n.end - n.t;
-      const h = Math.max(24, dur * pxPerMs);
-      ctx.fillStyle = n.judged ? "#30d158" : "#5bd1ff";
-      ctx.fillRect(x, y - h, w, h);
-      // head cap
-      ctx.fillStyle = n.judged ? "#2ccc50" : "#aef";
-      ctx.fillRect(x, y - 8, w, 8);
-    } else {
-      // tap
-      ctx.fillStyle = n.judged ? "#30d158" : "#7ec8ff";
-      ctx.fillRect(x, y-12, w, 24);
-    }
-
-    // Miss if passed far below line and not judged
-    if (!n.judged && now - n.t > 150) {
-      n.judged = true;
-      game.stats.combo = 0;
-      game.stats.miss = (game.stats.miss||0)+1;
-    }
-  }
-
-  // HUD
-  ctx.fillStyle = "#e9eef7";
-  ctx.font = "16px system-ui, sans-serif";
-  ctx.fillText(`Score: ${game.stats.score}`, 10, 22);
-  ctx.fillText(`Combo: ${game.stats.combo || 0}`, 10, 42);
-  ctx.fillText(`${game.numKeys}K • ${game.diffName}`, 10, 62);
-
+  audio.currentTime=0; audio.play();
   requestAnimationFrame(loop);
 }
 
-function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+function loop(){
+  if(!game||!audio)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-function drawCoverImage(img, ctx, W, H, alpha=0.3) {
-  const iw = img.naturalWidth || img.width;
-  const ih = img.naturalHeight || img.height;
-  if (!iw || !ih) return;
-  const scale = Math.max(W/iw, H/ih);
-  const dw = iw * scale, dh = ih * scale;
-  const dx = (W - dw)/2, dy = (H - dh)/2;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.drawImage(img, dx, dy, dw, dh);
-  ctx.restore();
+  // BG
+  if(bgImage) drawCoverImage(bgImage);
+
+  const cw = game.columnWidth, lineY = game.lineY;
+  ctx.fillStyle="#fff"; ctx.fillRect(0,lineY,canvas.width,4);
+  for(let i=0;i<game.numKeys;i++){
+    ctx.strokeStyle="rgba(255,255,255,.1)";
+    ctx.strokeRect(i*cw,0,cw,canvas.height);
+  }
+
+  const now = audio.currentTime*1000+globalOffset, pxPerMs=scrollSpeed*0.6;
+  for(const n of game.hitObjects){
+    const col = Math.floor(n.x * game.numKeys / 512);
+    const dt = n.t - now, y = lineY - dt*pxPerMs;
+    if(y<-200||y>canvas.height+400) continue;
+    const xx = col*cw+4, w=cw-8;
+    if(n.end){ const h=(n.end-n.t)*pxPerMs; ctx.fillStyle="#5bd1ff"; ctx.fillRect(xx,y-h,w,h); }
+    else { ctx.fillStyle="#7ec8ff"; ctx.fillRect(xx,y-12,w,24); }
+  }
+
+  ctx.fillStyle="#fff"; ctx.font="14px sans-serif";
+  ctx.fillText(`Notes: ${game.hitObjects.length}`,10,20);
+  ctx.fillText(`${game.numKeys}K • ${game.diffName}`,10,40);
+
+  if(!audio.paused) requestAnimationFrame(loop);
+}
+function drawCoverImage(img){
+  const iw=img.width, ih=img.height, scale=Math.max(canvas.width/iw,canvas.height/ih);
+  ctx.globalAlpha=0.3;
+  ctx.drawImage(img,(canvas.width-iw*scale)/2,(canvas.height-ih*scale)/2,iw*scale,ih*scale);
+  ctx.globalAlpha=1;
 }
 
 /* -----------------------------
-   Utilities & boot
+   Controls
 ----------------------------- */
-function status(msg){ statusEl.textContent = msg; }
-
-window.addEventListener("load", listSongs);
-window.addEventListener("resize", ()=>{
-  // keep canvas aspect reasonable on resize
-  const maxW = Math.min(1100, window.innerWidth - 380);
-  const w = Math.max(720, maxW);
-  const h = 600;
-  canvas.width = w;
-  canvas.height = h;
+btnBack.onclick=()=>{ if(audio) audio.pause(); game=null;
+  document.getElementById("sidebar").style.display="block"; btnBack.style.display="none"; ctx.clearRect(0,0,canvas.width,canvas.height);
+};
+resumeBtn.onclick=()=>{ overlay.style.display="none"; audio.play(); }
+restartBtn.onclick=()=>{ if(audio) audio.currentTime=0; overlay.style.display="none"; audio.play(); }
+quitBtn.onclick=()=>btnBack.click();
+window.addEventListener("keydown",e=>{
+  if(e.code==="Escape"&&game){
+    overlay.style.display=overlay.style.display==="none"?"flex":"none";
+    if(overlay.style.display==="flex") audio.pause(); else audio.play();
+  }
 });
 
+/* -----------------------------
+   Init
+----------------------------- */
+listSongs();
 </script>
 </body>
 </html>
