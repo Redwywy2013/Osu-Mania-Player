@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>osu!mania Web Player</title>
+<style>
+  body { margin:0; background:#111; color:white; font-family:sans-serif; text-align:center; }
+  #menu, #game { display:none; }
+  #menu { padding:20px; }
+  canvas { background:#000; display:block; margin:0 auto; }
+  button { margin:5px; padding:10px; }
+</style>
+</head>
+<body>
+<h1>osu!mania Web Player</h1>
+
+<div id="menu">
+  <h2>Select a Song</h2>
+  <div id="songList"></div>
+</div>
+
+<div id="game">
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+</div>
+
+<script>
+// ==== CONFIG: manually list songs for now ====
+const songs = [
+  {
+    name: "Artist - Title",
+    folder: "Songs/Artist - Title",
+    audio: "audio.ogg",
+    difficulties: ["WyreJK's Extra.osu"]
+  }
+];
+
+// ==== UI ====
+const menuDiv = document.getElementById("menu");
+const songList = document.getElementById("songList");
+const gameDiv = document.getElementById("game");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+menuDiv.style.display = "block"; // show menu first
+
+songs.forEach(song => {
+  let div = document.createElement("div");
+  div.innerHTML = `<h3>${song.name}</h3>`;
+  song.difficulties.forEach(diff => {
+    let btn = document.createElement("button");
+    btn.textContent = diff;
+    btn.onclick = () => startGame(song, diff);
+    div.appendChild(btn);
+  });
+  songList.appendChild(div);
+});
+
+// ==== OSU PARSER ====
+async function loadOsu(path) {
+  const res = await fetch(path);
+  const text = await res.text();
+  return parseOsu(text);
+}
+
+function parseOsu(content) {
+  const lines = content.split("\n");
+  let hitObjects = [];
+  let metadata = {};
+  let section = "";
+
+  for (let line of lines) {
+    line = line.trim();
+    if (line.startsWith("[") && line.endsWith("]")) { section = line; continue; }
+
+    if (section === "[Metadata]" && line.includes(":")) {
+      let [k,v] = line.split(":");
+      metadata[k.trim()] = v.trim();
+    }
+
+    if (section === "[HitObjects]" && line.length > 0) {
+      let parts = line.split(",");
+      let x = parseInt(parts[0]);
+      let time = parseInt(parts[2]);
+      let type = parseInt(parts[3]);
+      let endTime = parts[5] ? parseInt(parts[5]) : null;
+      let column = Math.floor(x / (512/4)); // 4-key only
+      hitObjects.push({time, column, type, endTime, hit:false});
+    }
+  }
+  return {metadata, hitObjects};
+}
+
+// ==== GAME ====
+let audio, notes, startTime;
+let keyStates = {};
+
+function startGame(song, diffFile) {
+  menuDiv.style.display = "none";
+  gameDiv.style.display = "block";
+
+  loadOsu(`${song.folder}/${diffFile}`).then(map => {
+    notes = map.hitObjects;
+    audio = new Audio(`${song.folder}/${song.audio}`);
+    audio.play();
+    startTime = performance.now();
+    requestAnimationFrame(gameLoop);
+  });
+}
+
+function gameLoop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  let currentTime = performance.now() - startTime;
+
+  // Draw judgment line
+  let lineY = 550;
+  ctx.fillStyle="white";
+  ctx.fillRect(0,lineY,canvas.width,5);
+
+  // Draw columns
+  let colWidth = canvas.width/4;
+  for (let i=0;i<4;i++) {
+    ctx.strokeStyle="#444";
+    ctx.strokeRect(i*colWidth,0,colWidth,canvas.height);
+  }
+
+  // Draw notes
+  ctx.fillStyle="cyan";
+  notes.forEach(n=>{
+    let timeToHit = n.time - currentTime;
+    let speed = 0.3; // px per ms
+    let y = lineY - timeToHit*speed;
+    ctx.fillRect(n.column*colWidth+5,y,colWidth-10,20);
+  });
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ==== INPUT ====
+window.addEventListener("keydown", e => { keyStates[e.code]=true; });
+window.addEventListener("keyup", e => { keyStates[e.code]=false; });
+
+</script>
+</body>
+</html>
