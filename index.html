@@ -6,7 +6,6 @@
 <style>
   body { margin:0; background:#111; color:white; font-family:sans-serif; text-align:center; }
   #menu, #game { display:none; }
-  #menu { padding:20px; }
   canvas { background:#000; display:block; margin:0 auto; }
   button { margin:5px; padding:10px; }
 </style>
@@ -14,9 +13,15 @@
 <body>
 <h1>osu!mania Web Player</h1>
 
+<div id="loader">
+  <h2>Load .osuhtml file</h2>
+  <input type="file" id="fileInput" accept=".osuhtml">
+</div>
+
 <div id="menu">
-  <h2>Select a Song</h2>
-  <div id="songList"></div>
+  <h2 id="songTitle"></h2>
+  <h3>Select Difficulty</h3>
+  <div id="diffList"></div>
 </div>
 
 <div id="game">
@@ -24,87 +29,96 @@
 </div>
 
 <script>
-// ==== CONFIG: manually list songs for now ====
-const songs = [
-  {
-    name: "Artist - Title",
-    folder: "Songs/Artist - Title",
-    audio: "audio.ogg",
-    difficulties: ["WyreJK's Extra.osu"]
-  }
-];
-
-// ==== UI ====
+const fileInput = document.getElementById("fileInput");
 const menuDiv = document.getElementById("menu");
-const songList = document.getElementById("songList");
+const songTitleEl = document.getElementById("songTitle");
+const diffList = document.getElementById("diffList");
 const gameDiv = document.getElementById("game");
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-menuDiv.style.display = "block"; // show menu first
+let songData = {};
+let notes = [];
+let audio, startTime;
 
-songs.forEach(song => {
-  let div = document.createElement("div");
-  div.innerHTML = `<h3>${song.name}</h3>`;
-  song.difficulties.forEach(diff => {
-    let btn = document.createElement("button");
-    btn.textContent = diff;
-    btn.onclick = () => startGame(song, diff);
-    div.appendChild(btn);
-  });
-  songList.appendChild(div);
+fileInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  parseOsuhtml(text);
 });
 
-// ==== OSU PARSER ====
-async function loadOsu(path) {
-  const res = await fetch(path);
-  const text = await res.text();
-  return parseOsu(text);
+function parseOsuhtml(text) {
+  songData = { difficulties: {} };
+
+  // Parse artist-title
+  const atMatch = text.match(/^Artist - Title:\s*(.+)$/m);
+  if (atMatch) songData.title = atMatch[1];
+
+  // Parse difficulties
+  const diffRegex = /\[(.+?)\]:\n([\s\S]*?)(?=^\[|\nBackground:|\nAudio Data:|$)/gm;
+  let diffMatch;
+  while ((diffMatch = diffRegex.exec(text)) !== null) {
+    songData.difficulties[diffMatch[1]] = diffMatch[2].trim();
+  }
+
+  // Parse background
+  const bgMatch = text.match(/Background:\s*(data:image\/.+)$/m);
+  if (bgMatch) songData.background = bgMatch[1];
+
+  // Parse audio
+  const audioMatch = text.match(/Audio Data:\s*(data:audio\/.+)$/m);
+  if (audioMatch) songData.audio = audioMatch[1];
+
+  showMenu();
 }
 
-function parseOsu(content) {
-  const lines = content.split("\n");
-  let hitObjects = [];
-  let metadata = {};
-  let section = "";
+function showMenu() {
+  document.getElementById("loader").style.display = "none";
+  menuDiv.style.display = "block";
+  songTitleEl.textContent = songData.title || "Unknown Song";
 
+  diffList.innerHTML = "";
+  for (let diffName in songData.difficulties) {
+    let btn = document.createElement("button");
+    btn.textContent = diffName;
+    btn.onclick = () => startGame(diffName);
+    diffList.appendChild(btn);
+  }
+}
+
+function parseOsuContent(osuText) {
+  let hitObjects = [];
+  let lines = osuText.split("\n");
+  let section = "";
   for (let line of lines) {
     line = line.trim();
-    if (line.startsWith("[") && line.endsWith("]")) { section = line; continue; }
-
-    if (section === "[Metadata]" && line.includes(":")) {
-      let [k,v] = line.split(":");
-      metadata[k.trim()] = v.trim();
+    if (line.startsWith("[") && line.endsWith("]")) {
+      section = line;
+      continue;
     }
-
     if (section === "[HitObjects]" && line.length > 0) {
       let parts = line.split(",");
       let x = parseInt(parts[0]);
       let time = parseInt(parts[2]);
       let type = parseInt(parts[3]);
       let endTime = parts[5] ? parseInt(parts[5]) : null;
-      let column = Math.floor(x / (512/4)); // 4-key only
+      let column = Math.floor(x / (512/4));
       hitObjects.push({time, column, type, endTime, hit:false});
     }
   }
-  return {metadata, hitObjects};
+  return hitObjects;
 }
 
-// ==== GAME ====
-let audio, notes, startTime;
-let keyStates = {};
-
-function startGame(song, diffFile) {
+function startGame(diffName) {
   menuDiv.style.display = "none";
   gameDiv.style.display = "block";
 
-  loadOsu(`${song.folder}/${diffFile}`).then(map => {
-    notes = map.hitObjects;
-    audio = new Audio(`${song.folder}/${song.audio}`);
-    audio.play();
-    startTime = performance.now();
-    requestAnimationFrame(gameLoop);
-  });
+  notes = parseOsuContent(songData.difficulties[diffName]);
+  audio = new Audio(songData.audio);
+  audio.play();
+  startTime = performance.now();
+  requestAnimationFrame(gameLoop);
 }
 
 function gameLoop() {
@@ -112,19 +126,16 @@ function gameLoop() {
 
   let currentTime = performance.now() - startTime;
 
-  // Draw judgment line
   let lineY = 550;
-  ctx.fillStyle="white";
+  ctx.fillStyle = "white";
   ctx.fillRect(0,lineY,canvas.width,5);
 
-  // Draw columns
   let colWidth = canvas.width/4;
   for (let i=0;i<4;i++) {
     ctx.strokeStyle="#444";
     ctx.strokeRect(i*colWidth,0,colWidth,canvas.height);
   }
 
-  // Draw notes
   ctx.fillStyle="cyan";
   notes.forEach(n=>{
     let timeToHit = n.time - currentTime;
@@ -133,13 +144,8 @@ function gameLoop() {
     ctx.fillRect(n.column*colWidth+5,y,colWidth-10,20);
   });
 
-  requestAnimationFrame(gameLoop);
+  if (!audio.paused) requestAnimationFrame(gameLoop);
 }
-
-// ==== INPUT ====
-window.addEventListener("keydown", e => { keyStates[e.code]=true; });
-window.addEventListener("keyup", e => { keyStates[e.code]=false; });
-
 </script>
 </body>
 </html>
